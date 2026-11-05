@@ -13,9 +13,11 @@ func PingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := PingResponse{
-		Status:  DefaultStatus,
-		Version: DefaultVersion,
-		Uptime:  DefaultUptime,
+		Status:    DefaultStatus,
+		Version:   DefaultVersion,
+		Uptime:    DefaultUptime,
+		GitCommit: GitCommit,
+		BuildTime: BuildTime,
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
