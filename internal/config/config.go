@@ -7,12 +7,14 @@ import (
 )
 
 type Config struct {
-	Port         string        // env: PORT, default: "8080"
-	FetchTimeout time.Duration // env: FETCH_TIMEOUT, default: 8s
-	MaxBodyBytes int64         // env: MAX_BODY_BYTES, default: 5242880 (5MB)
-	CacheBackend string        // env: CACHE_BACKEND, default: "memory"
-	CacheTTL     time.Duration // env: CACHE_TTL, default: 10m
-	UserAgent    string        // env: USER_AGENT, default modern Chrome/Safari UA string
+	Port          string        // env: PORT, default: "8080"
+	FetchTimeout  time.Duration // env: FETCH_TIMEOUT, default: 8s
+	MaxBodyBytes  int64         // env: MAX_BODY_BYTES, default: 5242880 (5MB)
+	CacheBackend  string        // env: CACHE_BACKEND, default: "memory"
+	CacheTTL      time.Duration // env: CACHE_TTL, default: 10m
+	UserAgent     string        // env: USER_AGENT, default modern Chrome UA
+	RedisURL      string        // env: REDIS_URL, default: "redis://localhost:6379"
+	CacheMaxItems int           // env: CACHE_MAX_ITEMS, default: 10000
 }
 
 // DefaultUserAgent adalah UA modern Chrome pada macOS/Linux untuk menghindari blocking standar oleh web bot detector.
@@ -20,12 +22,14 @@ const DefaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleW
 
 func LoadConfig() *Config {
 	return &Config{
-		Port:         getEnv("PORT", "8080"),
-		FetchTimeout: getEnvDuration("FETCH_TIMEOUT", 8*time.Second),
-		MaxBodyBytes: getEnvInt64("MAX_BODY_BYTES", 5242880),
-		CacheBackend: getEnv("CACHE_BACKEND", "memory"),
-		CacheTTL:     getEnvDuration("CACHE_TTL", 10*time.Minute),
-		UserAgent:    getEnv("USER_AGENT", DefaultUserAgent),
+		Port:          getEnv("PORT", "8080"),
+		FetchTimeout:  getEnvDuration("FETCH_TIMEOUT", 8*time.Second),
+		MaxBodyBytes:  getEnvInt64("MAX_BODY_BYTES", 5242880),
+		CacheBackend:  getEnv("CACHE_BACKEND", "memory"),
+		CacheTTL:      getEnvDuration("CACHE_TTL", 10*time.Minute),
+		UserAgent:     getEnv("USER_AGENT", DefaultUserAgent),
+		RedisURL:      getEnv("REDIS_URL", "redis://localhost:6379"),
+		CacheMaxItems: int(getEnvInt64("CACHE_MAX_ITEMS", 10000)),
 	}
 }
 
