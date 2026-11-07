@@ -96,7 +96,7 @@ func TestPingHandler_MethodNotAllowed(t *testing.T) {
 }
 
 func TestRouter_Ping(t *testing.T) {
-	router := NewRouter()
+	router := NewRouter(nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
 	rec := httptest.NewRecorder()
