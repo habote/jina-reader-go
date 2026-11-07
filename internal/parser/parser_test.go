@@ -3,6 +3,8 @@ package parser
 import (
 	"strings"
 	"testing"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 func TestParseHTML_Pruning(t *testing.T) {
@@ -136,5 +138,25 @@ func BenchmarkParseHTML(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+func TestParseDocument_DirectDOM(t *testing.T) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<html><head><title>DOM</title></head><body><h2>Heading</h2><p>Text <a href="/x">#frag</a> <a href="https://y.test">y</a></p></body></html>`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := ParseDocument(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Title != "DOM" {
+		t.Errorf("title = %q", r.Title)
+	}
+	if !strings.Contains(r.Markdown, "## Heading") {
+		t.Errorf("heading missing: %s", r.Markdown)
+	}
+	if !strings.Contains(r.Markdown, "[y](https://y.test)") {
+		t.Errorf("external link missing: %s", r.Markdown)
 	}
 }

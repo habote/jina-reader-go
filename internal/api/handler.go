@@ -161,7 +161,10 @@ func (h *Handler) processURL(w http.ResponseWriter, r *http.Request, targetURL s
 			http.Error(w, "Forbidden: SSRF blocked", http.StatusForbidden)
 		case errors.Is(err, fetcher.ErrInvalidScheme):
 			http.Error(w, "Bad Request: only http/https allowed", http.StatusBadRequest)
-		case errors.Is(fetchCtx.Err(), context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "deadline"):
+		case errors.Is(err, context.DeadlineExceeded),
+			errors.Is(fetchCtx.Err(), context.DeadlineExceeded),
+			strings.Contains(err.Error(), "timeout"),
+			strings.Contains(err.Error(), "deadline"):
 			http.Error(w, "Gateway Timeout", http.StatusGatewayTimeout)
 		default:
 			http.Error(w, "Bad Gateway: "+err.Error(), http.StatusBadGateway)
@@ -170,6 +173,9 @@ func (h *Handler) processURL(w http.ResponseWriter, r *http.Request, targetURL s
 	}
 	defer fetchRes.Body.Close()
 
+	// Parse tetap lewat adaptor ParseHTML(io.Reader) agar kontrak
+	// handler tidak berubah; di dalam, adaptor memakai DOM goquery
+	// (ParseDocument) sesuai refactor Colly issue #16.
 	parsed, err := parser.ParseHTML(fetchRes.Body)
 	if err != nil {
 		http.Error(w, "Unprocessable Entity: parse error", http.StatusUnprocessableEntity)

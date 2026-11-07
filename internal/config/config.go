@@ -15,6 +15,11 @@ type Config struct {
 	UserAgent     string        // env: USER_AGENT, default modern Chrome UA
 	RedisURL      string        // env: REDIS_URL, default: "redis://localhost:6379"
 	CacheMaxItems int           // env: CACHE_MAX_ITEMS, default: 10000
+
+	// Scraper options (issue #16, Colly).
+	ScraperMaxDepth      int  // env: SCRAPER_MAX_DEPTH, default: 1 (single page, jangan crawl)
+	ScraperAsync         bool // env: SCRAPER_ASYNC, default: false (sync agar semantics Fetch tetap blocking)
+	ScraperRespectRobots bool // env: SCRAPER_RESPECT_ROBOTS, default: false (reader read-once; lihat README)
 }
 
 // DefaultUserAgent adalah UA modern Chrome pada macOS/Linux untuk menghindari blocking standar oleh web bot detector.
@@ -30,6 +35,10 @@ func LoadConfig() *Config {
 		UserAgent:     getEnv("USER_AGENT", DefaultUserAgent),
 		RedisURL:      getEnv("REDIS_URL", "redis://localhost:6379"),
 		CacheMaxItems: int(getEnvInt64("CACHE_MAX_ITEMS", 10000)),
+
+		ScraperMaxDepth:      int(getEnvInt64("SCRAPER_MAX_DEPTH", 1)),
+		ScraperAsync:         getEnvBool("SCRAPER_ASYNC", false),
+		ScraperRespectRobots: getEnvBool("SCRAPER_RESPECT_ROBOTS", false),
 	}
 }
 
@@ -50,6 +59,18 @@ func getEnvDuration(key string, defaultVal time.Duration) time.Duration {
 		return defaultVal
 	}
 	return d
+}
+
+func getEnvBool(key string, defaultVal bool) bool {
+	val, ok := os.LookupEnv(key)
+	if !ok || val == "" {
+		return defaultVal
+	}
+	b, err := strconv.ParseBool(val)
+	if err != nil {
+		return defaultVal
+	}
+	return b
 }
 
 func getEnvInt64(key string, defaultVal int64) int64 {
