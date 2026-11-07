@@ -1,0 +1,13 @@
+.git
+.github
+.gitignore
+*.md
+!README.md
+tmp/
+bin/
+vendor/
+*.local
+.env*
+.DS_Store
+internal/api/handler_test.go
+internal/parser/parser_test.go
