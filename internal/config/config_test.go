@@ -99,3 +99,35 @@ func TestLoadConfig_InvalidFallbacks(t *testing.T) {
 		t.Errorf("expected fallback CacheMaxItems 10000, got %d", cfg.CacheMaxItems)
 	}
 }
+
+func TestLoadConfig_ScraperDefaults(t *testing.T) {
+	t.Setenv("SCRAPER_MAX_DEPTH", "")
+	t.Setenv("SCRAPER_ASYNC", "")
+	t.Setenv("SCRAPER_RESPECT_ROBOTS", "")
+	cfg := LoadConfig()
+	if cfg.ScraperMaxDepth != 1 {
+		t.Errorf("expected ScraperMaxDepth 1, got %d", cfg.ScraperMaxDepth)
+	}
+	if cfg.ScraperAsync {
+		t.Errorf("expected ScraperAsync false")
+	}
+	if cfg.ScraperRespectRobots {
+		t.Errorf("expected ScraperRespectRobots false")
+	}
+}
+
+func TestLoadConfig_ScraperCustom(t *testing.T) {
+	t.Setenv("SCRAPER_MAX_DEPTH", "3")
+	t.Setenv("SCRAPER_ASYNC", "true")
+	t.Setenv("SCRAPER_RESPECT_ROBOTS", "true")
+	cfg := LoadConfig()
+	if cfg.ScraperMaxDepth != 3 {
+		t.Errorf("expected ScraperMaxDepth 3, got %d", cfg.ScraperMaxDepth)
+	}
+	if !cfg.ScraperAsync {
+		t.Errorf("expected ScraperAsync true")
+	}
+	if !cfg.ScraperRespectRobots {
+		t.Errorf("expected ScraperRespectRobots true")
+	}
+}

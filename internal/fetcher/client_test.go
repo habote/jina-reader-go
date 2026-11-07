@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -175,5 +176,96 @@ func TestFetchSuccessLocalhost(t *testing.T) {
 	}
 	if string(body) != "<h1>Hello World</h1>" {
 		t.Errorf("unexpected body content: %s", string(body))
+	}
+}
+
+func TestFetchNonHTMLFallback(t *testing.T) {
+	for _, ct := range []string{"text/plain", "application/json"} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", ct)
+			_, _ = w.Write([]byte("plain body"))
+		}))
+		f := NewFetcher(5*time.Second, 1024*1024, "TestAgent", WithAllowLocalhost(true))
+		res, err := f.Fetch(context.Background(), server.URL)
+		if err != nil {
+			t.Fatalf("[%s] unexpected error: %v", ct, err)
+		}
+		data, _ := io.ReadAll(res.Body)
+		res.Body.Close()
+		server.Close()
+		if string(data) != "plain body" {
+			t.Errorf("[%s] body = %q", ct, string(data))
+		}
+		if res.StatusCode != 200 {
+			t.Errorf("[%s] status = %d", ct, res.StatusCode)
+		}
+	}
+}
+
+func TestFetchFinalURLAndStatus(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/go", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/final", http.StatusFound)
+	})
+	mux.HandleFunc("/final", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte("<html><head><title>F</title></head><body><p>hi</p></body></html>"))
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	f := NewFetcher(5*time.Second, 1024*1024, "TestAgent", WithAllowLocalhost(true))
+	res, err := f.Fetch(context.Background(), server.URL+"/go")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		t.Errorf("status = %d", res.StatusCode)
+	}
+	if !strings.HasSuffix(res.FinalURL, "/final") {
+		t.Errorf("FinalURL = %q, want suffix /final", res.FinalURL)
+	}
+	if !strings.Contains(res.ContentType, "text/html") {
+		t.Errorf("ContentType = %q", res.ContentType)
+	}
+}
+
+func TestFetchHTTPErrorStatus(t *testing.T) {
+	for _, code := range []int{404, 500} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			w.WriteHeader(code)
+			_, _ = w.Write([]byte("<html><head><title>Err</title></head><body><p>body</p></body></html>"))
+		}))
+		f := NewFetcher(5*time.Second, 1024*1024, "TestAgent", WithAllowLocalhost(true))
+		res, err := f.Fetch(context.Background(), server.URL)
+		server.Close()
+		if err != nil {
+			t.Errorf("[%d] unexpected error: %v", code, err)
+		}
+		if res == nil {
+			t.Errorf("[%d] nil result", code)
+			continue
+		}
+		if res.StatusCode != code {
+			t.Errorf("[%d] status = %d", code, res.StatusCode)
+		}
+		res.Body.Close()
+	}
+}
+
+func TestFetchTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(time.Second)
+		_, _ = w.Write([]byte("slow"))
+	}))
+	defer server.Close()
+	f := NewFetcher(100*time.Millisecond, 1024*1024, "TestAgent", WithAllowLocalhost(true))
+	_, err := f.Fetch(context.Background(), server.URL)
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected DeadlineExceeded sentinel, got: %v", err)
 	}
 }

@@ -2,6 +2,9 @@ package parser
 
 import (
 	"io"
+	"strings"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 // ParsedResult menyimpan hasil parsing HTML.
@@ -13,18 +16,21 @@ type ParsedResult struct {
 // ParseHTML membaca HTML stream dari r dan mengonversinya menjadi
 // ParsedResult. Fungsi ini aman terhadap malformed HTML dan tidak
 // melempar panic.
+//
+// Implementasi lama memakai streaming tokenizer; sejak refactor Colly
+// (issue #16) fungsi ini menjadi adaptor di atas DOM goquery agar
+// kontrak internal/api/handler.go tidak berubah.
 func ParseHTML(r io.Reader) (*ParsedResult, error) {
 	if r == nil {
 		return &ParsedResult{}, nil
 	}
-	result, err := parse(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
-		// Tokenizer hampir tidak pernah error fatal selain EOF/I/O.
-		// Pastikan kita tetap mengembalikan hasil yang didapat sejauh ini.
-		if result == nil {
-			return &ParsedResult{}, nil
-		}
-		return result, nil
+		return &ParsedResult{}, nil
 	}
-	return result, nil
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(data)))
+	if err != nil {
+		return &ParsedResult{}, nil
+	}
+	return ParseDocument(doc)
 }

@@ -38,7 +38,11 @@ func main() {
 		defer c.Close()
 	}
 
-	f := fetcher.NewFetcher(cfg.FetchTimeout, cfg.MaxBodyBytes, cfg.UserAgent)
+	f := fetcher.NewFetcher(cfg.FetchTimeout, cfg.MaxBodyBytes, cfg.UserAgent,
+		fetcher.WithMaxDepth(cfg.ScraperMaxDepth),
+		fetcher.WithAsync(cfg.ScraperAsync),
+		fetcher.WithRespectRobots(cfg.ScraperRespectRobots),
+	)
 	h := api.NewHandler(cfg, c, f)
 
 	addr := ":" + cfg.Port
